@@ -9,7 +9,8 @@ await cp(join(root, 'apps/web/index.html'), join(dist, 'index.html'));
 await cp(join(root, 'apps/web/src'), dist, { recursive: true });
 await cp(join(root, 'apps/web/public'), dist, { recursive: true });
 await cp(join(root, 'packages'), join(dist, 'packages'), { recursive: true });
-await cp(join(root, 'providers'), join(dist, 'providers'), { recursive: true });
+await mkdir(join(dist, 'providers'), { recursive: true });
+await cp(join(root, 'providers/demo.js'), join(dist, 'providers/demo.js'));
 // A portable static demo reuses the SAME pricing engine as the Node API.
 // Production integrations must run on a server; never put credentials in this file.
 await writeFile(join(dist, 'api-client.js'), `import { catalog, regions } from './packages/domain/catalog.js';

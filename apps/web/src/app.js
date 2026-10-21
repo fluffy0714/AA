@@ -20,15 +20,40 @@ function renderBasket() {
   return `<div class="basket-item"><div class="basket-thumb" style="background:${p.color}">${productArt(p.art)}</div><div class="basket-item-info"><b>${esc(p.name)}</b><span>${esc(p.size)}</span></div>${stepper(p, quantity)}</div>`;
  }).join('');
 }
+function quoteIssues(q) {
+ const issues = q.issues || [];
+ const displayed = [...new Map(issues.map(i => [i.code + (i.productId || ''), i])).values()];
+ return `<ul class="quote-issues">${displayed.map(i => {
+  const product = state.products.find(p => p.id === i.productId);
+  return `<li>${esc(i.message)}${product ? `<small>${esc(product.name)} · ${esc(product.size)}</small>` : ''}</li>`;
+ }).join('')}</ul>`;
+}
+function updateDock() {
+ $('cart-dock').hidden = totalCount() === 0;
+ $('dock-count').textContent = totalCount();
+ const winner = !state.expired && !state.busy && state.data?.quotes.find(q => q.providerId === state.data.comparison.winnerId);
+ $('dock-total').textContent = winner ? `от ${rub(winner.total)} →` : 'К сравнению →';
+}
 function renderQuotes() {
+ updateDock();
  $('details-button').disabled = !state.data?.quotes.length || state.busy || state.expired;
  if (!totalCount()) { $('quotes').innerHTML = '<div class="quote-placeholder"><span><i class="provider-dot yandex"></i>Яндекс Еда</span><b>—</b></div><div class="quote-placeholder"><span><i class="provider-dot kuper"></i>Купер</span><b>—</b></div>'; return; }
  if (state.busy) { $('quotes').innerHTML = '<p class="quote-loading">Рассчитываем одну и ту же корзину…</p>'; return; }
  if (!state.data) { $('quotes').innerHTML = '<p class="quote-error">Не удалось получить расчёт.</p><button id="retry-button" class="secondary-button">Повторить</button>'; return; }
  if (state.expired) { $('quotes').innerHTML = '<p class="quote-error">Расчёт устарел. Обновите цены перед сравнением.</p><button id="retry-button" class="secondary-button">Обновить расчёт</button>'; return; }
  const { comparison } = state.data;
- $('quotes').innerHTML = state.data.quotes.map(q => `<div class="quote ${comparison.winnerId === q.providerId ? 'winner' : ''}"><div class="quote-top"><span class="provider-name"><i class="provider-dot ${q.providerId}"></i>${esc(q.providerName)}</span>${comparison.winnerId === q.providerId ? '<span class="winner-badge">Выгоднее</span>' : ''}</div>${q.status === 'unavailable' ? '<p class="quote-error">Сервис не ответил</p>' : q.status === 'incomplete' ? `<p class="quote-error">Нет ${q.missing.length} позиции · итога нет</p><p class="microcopy">Неполную корзину нельзя сравнивать с полной.</p>` : `<div class="quote-total"><strong>${rub(q.total)}</strong><span>${q.eta}</span></div><div class="quote-detail"><span>Товары</span><span>${rub(q.subtotal)}</span></div><div class="quote-detail"><span>Доставка и сборы</span><span>${rub(q.delivery+q.service+q.surge)}</span></div>${q.discount ? `<div class="quote-detail discount"><span>Промокод</span><span>−${rub(q.discount)}</span></div>` : ''}`}</div>`).join('') + (comparison.status === 'compared' ? `<p class="savings">Разница в деморасчёте <b>${rub(comparison.savings)}</b></p>` : comparison.status === 'tie' ? '<p class="savings">Полная стоимость одинакова</p>' : '<p class="comparison-warning">Сравнение неполное. Выгодный вариант не определён.</p>') + '<p class="quote-time">Деморасчёт действителен 5 минут <button id="refresh-button" class="text-button">Обновить</button></p>';
+ $('quotes').innerHTML = state.data.quotes.map(q => `<div class="quote ${comparison.winnerId === q.providerId ? 'winner' : ''}"><div class="quote-top"><span class="provider-name"><i class="provider-dot ${esc(q.providerId)}"></i>${esc(q.providerName)}</span>${comparison.winnerId === q.providerId ? '<span class="winner-badge">Выгоднее</span>' : ''}</div>${q.status !== 'complete' ? `<p class="quote-error">${q.status === 'unavailable' ? 'Сервис не ответил' : 'Полный итог недоступен'}</p>${quoteIssues(q)}` : `<div class="quote-total"><strong>${rub(q.total)}</strong><span>${esc(q.eta)}</span></div><div class="quote-detail"><span>Товары</span><span>${rub(q.subtotal)}</span></div><div class="quote-detail"><span>Доставка и сборы</span><span>${rub(q.delivery+q.service+q.surge)}</span></div>${q.discount ? `<div class="quote-detail discount"><span>Промокод</span><span>−${rub(q.discount)}</span></div>` : ''}<p class="match-confirmation">✓ ${q.lines.length} поз. · товары и количество совпадают</p>`}</div>`).join('') + (comparison.status === 'compared' ? `<p class="savings">Разница в деморасчёте <b>${rub(comparison.savings)}</b></p>` : comparison.status === 'tie' ? '<p class="savings">Полная стоимость одинакова</p>' : '<p class="comparison-warning">Сравнение неполное. Выгодный вариант не определён.</p>') + '<p class="quote-time"><span id="quote-countdown">Срок действия расчёта: до 5 минут</span> <button id="refresh-button" class="text-button">Обновить</button></p>';
+ updateCountdown();
 }
+function updateCountdown() {
+ const label = $('quote-countdown');
+ if (!label || !state.data) return;
+ const expiry = Math.min(...state.data.quotes.filter(q=>q.status === 'complete').map(q=>Date.parse(q.expiresAt)));
+ if (!Number.isFinite(expiry)) { label.textContent = 'Нужен новый полный расчёт'; return; }
+ const seconds = Math.max(0, Math.ceil((expiry-Date.now())/1000));
+ label.textContent = `Цены ещё ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+}
+setInterval(updateCountdown, 1000);
 async function refresh() {
  const request = ++state.request;
  clearTimeout(state.timer); state.expired = false; state.data = null;
@@ -39,7 +64,7 @@ async function refresh() {
   const data = await compare(payload);
   if (request !== state.request) return;
   state.data = data;
-  const expiry = Math.min(...data.quotes.filter(q=>q.expiresAt).map(q=>Date.parse(q.expiresAt)));
+  const expiry = Math.min(...data.quotes.filter(q=>q.status === 'complete' && q.expiresAt).map(q=>Date.parse(q.expiresAt)));
   if (Number.isFinite(expiry)) state.timer = setTimeout(() => { state.expired = true; renderQuotes(); if ($('detail-dialog').open && $('detail-dialog').dataset.kind === 'comparison') showComparison(); }, Math.max(0,expiry-Date.now()));
   if (state.promo) $('promo-note').textContent = data.quotes.some(q=>q.promoStatus === 'applied') ? 'DEMO10 применён к корзине Купера.' : 'Промокод не применён. DEMO10 работает в Купере от 500 ₽ на товары.';
  } catch (error) { if (request !== state.request) return; state.data = null; }
@@ -60,17 +85,24 @@ function showComparison() {
  const qs = state.data.quotes;
  const rows = [...state.cart].map(([id,qty])=>{
   const p=state.products.find(p=>p.id===id);
-  return `<tr><th scope="row">${esc(p.name)}<small>${esc(p.size)} × ${qty}</small></th>${qs.map(q=>{const l=q.lines?.find(l=>l.productId===id);return `<td>${!l?'Нет данных':!l.available?'Нет в наличии':rub(l.subtotal)}</td>`;}).join('')}</tr>`;
+  return `<tr><th scope="row">${esc(p.name)}<small>${esc(p.size)} × ${qty}</small></th>${qs.map(q=>{const l=q.lines?.find(l=>l.productId===id);const issues=q.issues?.filter(i=>i.productId===id)||[];return `<td>${!l?'Нет данных':!l.available?'Нет в наличии':l.match!=='exact'?'Другая упаковка':rub(l.subtotal)}<small class="${issues.length?'line-warning':'line-match'}">${!l?'':issues.length?issues.map(i=>esc(i.message)).join('<br>'):'Точное совпадение'}</small></td>`;}).join('')}</tr>`;
  }).join('');
+ const problemIds = [...new Set(qs.flatMap(q => q.issues || []).filter(i => ['missing','mismatch'].includes(i.code)).map(i => i.productId))];
+ const problems = problemIds.length ? `<div class="basket-resolution"><b>Можно сравнить корзину без спорных товаров</b><p>Удалите позицию из общей корзины — состав останется одинаковым для обоих сервисов.</p>${problemIds.map(id=>`<button class="secondary-button" data-remove="${id}">Убрать «${esc(state.products.find(p=>p.id===id).name)}» из обеих корзин</button>`).join('')}</div>` : '';
  const feeRows = [['subtotal','Товары'],['delivery','Доставка'],['service','Сервисный сбор'],['surge','Повышенный спрос'],['discount','Скидка'],['total','Полная стоимость']].map(([key,label])=>`<tr class="${key==='total'?'total-row':''}"><th scope="row">${label}</th>${qs.map(q=>`<td>${q[key] == null?'—':(key==='discount'&&q[key]?'−':'')+rub(q[key])}</td>`).join('')}</tr>`).join('');
- openDialog('Вся корзина. Все расходы.', `<p class="dialog-intro">Демонстрационные цены, ${esc($('region').selectedOptions[0].textContent)}. Сравниваем одинаковые упаковки и количество.</p><div class="table-wrap"><table><thead><tr><th scope="col">Состав корзины</th>${qs.map(q=>`<th scope="col">${esc(q.providerName)}</th>`).join('')}</tr></thead><tbody>${rows}${feeRows}</tbody></table></div><p class="dialog-note">Если товара нет или сервис не отвечает, полный итог не вычисляется. Пустое значение не означает нулевую цену.</p><div class="checkout-block"><b>Оформление пока недоступно</b><p>Готовая корзина будет передаваться через официальную интеграцию. Сейчас подключение не настроено; реальные заказы не создаются.</p><button class="primary-button" disabled>Перейти к оформлению</button></div>`, 'comparison');
+ openDialog('Вся корзина. Все расходы.', `<p class="dialog-intro">Демонстрационные цены, ${esc($('region').selectedOptions[0].textContent)}. Сравниваем одинаковые упаковки и количество.</p><div class="table-wrap"><table><thead><tr><th scope="col">Состав корзины</th>${qs.map(q=>`<th scope="col">${esc(q.providerName)}<small>${q.status === 'complete' ? 'Полный расчёт' : [...new Set((q.issues || []).map(i=>esc(i.message)))].join('<br>')}</small></th>`).join('')}</tr></thead><tbody>${rows}${feeRows}</tbody></table></div>${problems}<p class="dialog-note">Если товара нет или сервис не отвечает, полный итог не вычисляется. Пустое значение не означает нулевую цену.</p><div class="checkout-block"><b>Оформление пока недоступно</b><p>Готовая корзина будет передаваться через официальную интеграцию. Сейчас подключение не настроено; реальные заказы не создаются.</p><button class="primary-button" disabled>Перейти к оформлению</button></div>`, 'comparison');
 }
 function showResearch() {
  openDialog('Что известно об интеграциях', `<p class="dialog-intro">Проверено 22 октября 2026 года. Наличие документации ещё не означает, что проект АА получил доступ.</p><div class="research-card"><h3>Купер <span>Есть направление для интеграции</span></h3><p>Официальный портал описывает Client apps API для клиентских приложений. Отдельный Fulfillment API документирует оформление заказов внешними витринами и опции доставки.</p><p>Условия подключения АА, доступ к магазинам, персональные скидки и перенос корзины в приложение требуют подтверждения.</p><a href="https://docs.kuper.ru/" target="_blank" rel="noopener noreferrer">Портал Купер API ↗</a><a href="https://docs.kuper.ru/api-products/fulfillment/swagger" target="_blank" rel="noopener noreferrer">Fulfillment API ↗</a></div><div class="research-card"><h3>Яндекс Еда <span>Потребительский сценарий не подтверждён</span></h3><p>Проверенная документация Retail API предназначена для интеграции кассовых систем магазинов. Она не подтверждает право АА читать корзину покупателя или оформлять заказ от его имени.</p><a href="https://yandex.ru/support/retail/ru/ref/" target="_blank" rel="noopener noreferrer">Официальный Retail API ↗</a></div><p class="dialog-note">Деморежим не обращается к API агрегаторов. Вымышленные товары и цены нужны только для проверки поведения приложения.</p>`, 'research');
 }
 document.addEventListener('click',event=>{
  const b=event.target.closest('button'); if(!b)return;
- if(b.dataset.change) change(b.dataset.id,Number(b.dataset.change));
+ if(b.dataset.change) {
+  const container = b.closest('#basket-items') ? '#basket-items' : '#products';
+  change(b.dataset.id,Number(b.dataset.change));
+  document.querySelector(`${container} [data-id="${b.dataset.id}"][data-change="${b.dataset.change}"]`)?.focus({preventScroll:true});
+ }
+ if(b.dataset.remove){state.cart.delete(b.dataset.remove);$('detail-dialog').close();renderProducts();renderBasket();refresh();}
  if(b.dataset.category){state.category=b.dataset.category;renderProducts();}
  if(b.id==='reset-search'){state.search='';state.category='Все продукты';$('search').value='';renderProducts();}
  if(b.id==='retry-button'||b.id==='refresh-button') refresh();

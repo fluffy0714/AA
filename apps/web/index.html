@@ -36,10 +36,11 @@
         <p class="basket-footnote">Корзина существует только на этой странице.<br>После обновления она очистится.</p>
       </aside>
     </div>
-    <section class="demo-lab"><div><span class="lab-icon" aria-hidden="true">⌘</span><div><h3>Проверьте разные ситуации</h3><p>Посмотрите, как АА учитывает спрос, отсутствие товаров и сбои.</p></div></div><label><span class="sr-only">Сценарий демонстрации</span><select id="scenario"><option value="normal">Обычная доставка</option><option value="busy">Высокий спрос</option><option value="missing">Нет товара в Купере</option><option value="outage">Купер не отвечает</option></select></label></section>
+    <section class="demo-lab"><div><span class="lab-icon" aria-hidden="true">⌘</span><div><h3>Проверьте разные ситуации</h3><p>Посмотрите, как АА учитывает спрос, отсутствие товаров и сбои.</p></div></div><label><span class="sr-only">Сценарий демонстрации</span><select id="scenario"><option value="normal">Обычная доставка</option><option value="busy">Высокий спрос</option><option value="missing">Нет молока в Купере</option><option value="outage">Купер не отвечает</option><option value="mismatch">Другая упаковка молока</option><option value="fees_unknown">Неизвестна доставка</option><option value="expired">Устаревший расчёт</option></select></label></section>
     <footer><a class="footer-brand" href="#">аа<span>меньше хлопот, больше выбора</span></a><span>Первый прототип · 2026</span><button class="text-button" id="footer-research">Об интеграциях ↗</button></footer>
   </main>
   <dialog id="detail-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><h2 id="dialog-title"></h2><button id="close-dialog" class="close-button" aria-label="Закрыть окно">×</button></div><div id="dialog-body"></div></dialog>
+  <a id="cart-dock" class="cart-dock" href="#basket" hidden><span>Корзина <b id="dock-count">0</b></span><span id="dock-total">Сравнить</span></a>
   <div id="toast" role="status"></div>
   <script type="module" src="/app.js"></script>
 </body>

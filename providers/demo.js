@@ -1,4 +1,5 @@
 import { catalog, regions } from '../packages/domain/catalog.js';
+import { requestKey } from '../packages/domain/quote.js';
 
 const definitions = [
   { id: 'yandex', name: 'Яндекс Еда', prices: [11490,13990,7990,19990,15990,22990,10990,9490,45990,5490,7490,17990], delivery: 9900, freeAbove: 200000, service: 3900, eta: '30–45 мин' },
@@ -9,14 +10,15 @@ const definitions = [
 // No endpoint or credential for a live provider is inferred from these demo fixtures.
 export function createDemoProviders() {
   return definitions.map(def => ({
-    id: def.id, name: def.name,
+    id: def.id, name: def.name, mode: 'demo',
     async quote(input, { now }) {
       if (input.scenario === 'outage' && def.id === 'kuper') throw new Error('Demo outage');
       const lines = input.items.map((item, index) => {
         const p = catalog.find(p => p.id === item.productId);
         const unitPrice = def.prices[catalog.indexOf(p)];
-        const available = !(input.scenario === 'missing' && def.id === 'kuper' && index === 0);
-        return { productId: p.id, identity: p.identity, quantity: item.quantity, match: 'exact', available, unitPrice, subtotal: available ? unitPrice * item.quantity : null };
+        const available = !(input.scenario === 'missing' && def.id === 'kuper' && p.id === 'milk');
+        const mismatch = input.scenario === 'mismatch' && def.id === 'kuper' && p.id === 'milk';
+        return { productId: p.id, identity: mismatch ? p.identity + ':different-pack' : p.identity, quantity: item.quantity, match: 'exact', available, unitPrice, subtotal: available ? unitPrice * item.quantity : null };
       });
       const missing = lines.filter(l => !l.available).map(l => l.productId);
       const subtotal = lines.reduce((sum, l) => sum + (l.subtotal ?? 0), 0);
@@ -27,11 +29,13 @@ export function createDemoProviders() {
       const surge = input.scenario === 'busy' ? (def.id === 'yandex' ? 12900 : 7900) : 0;
       const complete = missing.length === 0;
       return {
-        providerId: def.id, providerName: def.name, mode: 'demo', status: complete ? 'complete' : 'incomplete',
-        lines, missing, subtotal, discount, delivery, service: def.service, surge,
+        providerId: def.id, providerName: def.name, mode: 'demo', requestKey: requestKey(input), status: complete ? 'complete' : 'incomplete',
+        lines, missing, subtotal, discount, delivery: input.scenario === 'fees_unknown' && def.id === 'kuper' ? null : delivery, service: def.service, surge,
         total: complete ? subtotal + delivery + def.service + surge - discount : null,
         promoStatus: !input.promo ? 'none' : promoApplied ? 'applied' : 'not_applicable',
-        eta: def.eta, quotedAt: new Date(now).toISOString(), expiresAt: new Date(now + 5 * 60_000).toISOString(),
+        eta: def.eta,
+        quotedAt: new Date(input.scenario === 'expired' && def.id === 'kuper' ? now - 6 * 60_000 : now).toISOString(),
+        expiresAt: new Date(input.scenario === 'expired' && def.id === 'kuper' ? now - 60_000 : now + 5 * 60_000).toISOString(),
         checkout: { available: false, reason: 'Демонстрация: официальная интеграция оформления ещё не подключена.' }
       };
     }
