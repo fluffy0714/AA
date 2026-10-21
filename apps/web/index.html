@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#194d37"><meta name="description" content="Соберите продукты один раз и сравните полную стоимость корзины в Яндекс Еде и Купере. Демонстрационный прототип АА.">
+  <title>АА — одна корзина, больше выгоды</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="header"><div class="header-inner">
+    <a class="brand" href="/" aria-label="АА — главная"><span class="brand-mark">а<span>а</span></span><span class="brand-name">агрегатор<br>агрегаторов</span></a>
+    <nav aria-label="Основная навигация"><a class="nav-current" href="#catalog">Продукты</a><button id="how-button" class="text-button">Как это работает</button></nav>
+    <div class="header-right"><span class="demo-label"><i></i> Демо-версия</span><a href="#basket" class="mobile-cart" aria-label="Перейти к корзине">Корзина <span id="mobile-count">0</span></a></div>
+  </div></header>
+  <main class="page">
+    <section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><p class="eyebrow">ПОКУПКИ С ЯСНОЙ ГОЛОВОЙ</p><h1 id="hero-title">Одна корзина.<br><span>Больше выгоды.</span></h1><p>Соберите продукты один раз.<br>Сравните стоимость с доставкой и всеми сборами.</p><button id="sample-button" class="hero-button" disabled>Попробовать с примером <span aria-hidden="true">↗</span></button></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span class="floating-label label-one">Одинаковые товары <b>✓</b></span><div class="grocery-bag"><span class="bag-leaf leaf-one"></span><span class="bag-leaf leaf-two"></span><span class="bag-bread"></span><span class="bag-bottle"></span><div class="bag-body"><span>аа</span><small>одна корзина — ваш выбор</small></div></div><span class="floating-label label-two"><b>↘</b> Все расходы на виду</span></div></section>
+    <div class="demo-notice"><span class="notice-icon" aria-hidden="true">i</span><p><strong>Сейчас это демонстрация.</strong> Товары, цены и условия вымышлены. Реальные сервисы и оформление заказов ещё не подключены.</p><button id="research-button" class="text-button">Что уже проверено ↗</button></div>
+    <div id="startup-error" role="alert" hidden></div>
+    <div class="workspace">
+      <section id="catalog" class="catalog-section" aria-labelledby="catalog-title">
+        <div class="section-heading"><div><p class="eyebrow muted">НАЧНЁМ С ПРОДУКТОВ</p><h2 id="catalog-title">Что положим в корзину?</h2></div><span class="catalog-count" id="catalog-count"></span></div>
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Молоко, хлеб или что-нибудь вкусное" aria-label="Поиск продуктов" autocomplete="off"><kbd>/</kbd></label>
+        <div class="categories" id="categories" aria-label="Категории продуктов"></div>
+        <div class="catalog-note"><span>Цены за упаковку · демокаталог</span><span>12 товаров на каждый день</span></div>
+        <div id="products" class="products" aria-live="polite"><p class="loading">Загружаем продукты…</p></div>
+        <div class="principles"><div><span>01</span><b>Точное совпадение</b><p>Один товар, одна упаковка и одинаковое количество.</p></div><div><span>02</span><b>Честный итог</b><p>Доставка, сборы и скидки в одном расчёте.</p></div><div><span>03</span><b>Ваш выбор</b><p>Вы решаете, какой сервис подходит лучше.</p></div></div>
+      </section>
+      <aside id="basket" class="basket" aria-labelledby="basket-title">
+        <div class="basket-heading"><h2 id="basket-title">Ваша корзина <span id="basket-count">0</span></h2><button id="clear-button" class="text-button" hidden>Очистить</button></div>
+        <div id="basket-items"></div>
+        <div class="basket-settings"><label for="region">Деморайон доставки</label><select id="region"></select><p>Район меняет условную стоимость доставки.</p></div>
+        <form id="promo-form" class="promo-form"><label class="sr-only" for="promo">Демонстрационный промокод</label><input id="promo" placeholder="Промокод: DEMO10" maxlength="32" autocomplete="off"><button type="submit" aria-label="Применить промокод">→</button></form><p id="promo-note" class="microcopy">DEMO10: −10% на товары Купера от 500 ₽, до 200 ₽.</p>
+        <div class="compare-heading"><h3>Сравнение сервисов</h3><span>ДЕМО</span></div>
+        <div id="quotes" aria-live="polite"></div>
+        <button id="details-button" class="primary-button" disabled>Сравнить подробно <span>↗</span></button>
+        <p class="basket-footnote">Корзина существует только на этой странице.<br>После обновления она очистится.</p>
+      </aside>
+    </div>
+    <section class="demo-lab"><div><span class="lab-icon" aria-hidden="true">⌘</span><div><h3>Проверьте разные ситуации</h3><p>Посмотрите, как АА учитывает спрос, отсутствие товаров и сбои.</p></div></div><label><span class="sr-only">Сценарий демонстрации</span><select id="scenario"><option value="normal">Обычная доставка</option><option value="busy">Высокий спрос</option><option value="missing">Нет товара в Купере</option><option value="outage">Купер не отвечает</option></select></label></section>
+    <footer><a class="footer-brand" href="#">аа<span>меньше хлопот, больше выбора</span></a><span>Первый прототип · 2026</span><button class="text-button" id="footer-research">Об интеграциях ↗</button></footer>
+  </main>
+  <dialog id="detail-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><h2 id="dialog-title"></h2><button id="close-dialog" class="close-button" aria-label="Закрыть окно">×</button></div><div id="dialog-body"></div></dialog>
+  <div id="toast" role="status"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
